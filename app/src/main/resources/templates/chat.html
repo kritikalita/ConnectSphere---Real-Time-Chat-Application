@@ -1,0 +1,1128 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en" xmlns:th="http://www.thymeleaf.org">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <meta name="_csrf" th:content="${_csrf.token}"/>-->
+<!--    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
+<!--    <title>Chat App</title>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>-->
+<!--    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>-->
+<!--    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">-->
+<!--    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">-->
+<!--    <style>-->
+<!--        :root {-->
+<!--            &#45;&#45;bg-primary: #f7f7ff; &#45;&#45;bg-secondary: #ffffff;-->
+<!--            &#45;&#45;text-primary: #1a1a1a; &#45;&#45;text-secondary: #5f6c74; &#45;&#45;chat-sent: #d4f1f4;-->
+<!--            &#45;&#45;chat-received: #ffffff; &#45;&#45;border: #e2e8f0; &#45;&#45;accent: #1a3c34;-->
+<!--            &#45;&#45;accent-hover: #153029; &#45;&#45;shadow: rgba(0, 0, 0, 0.08); &#45;&#45;mention-bg: #ffe082;-->
+<!--            &#45;&#45;mention-text: #4e342e; &#45;&#45;active-chat-bg: #e6f0ff; &#45;&#45;online-indicator: #22c55e;-->
+<!--            &#45;&#45;transition-fast: all 0.2s ease-in-out;-->
+<!--        }-->
+<!--        [data-theme="dark"] {-->
+<!--            &#45;&#45;bg-primary: #121212; &#45;&#45;bg-secondary: #1e1e1e;-->
+<!--            &#45;&#45;text-primary: #e1e1e1; &#45;&#45;text-secondary: #8b959b; &#45;&#45;chat-sent: #2a5a52;-->
+<!--            &#45;&#45;chat-received: #252525; &#45;&#45;border: #374151; &#45;&#45;accent: #2a5a52;-->
+<!--            &#45;&#45;accent-hover: #1a3c34; &#45;&#45;shadow: rgba(0, 0, 0, 0.2); &#45;&#45;mention-bg: #624b00;-->
+<!--            &#45;&#45;mention-text: #ffecb3; &#45;&#45;active-chat-bg: #2a2e4a; &#45;&#45;online-indicator: #4ade80;-->
+<!--        }-->
+
+<!--        .reply-context {-->
+<!--            background-color: rgba(0,0,0,0.04);-->
+<!--            padding: 8px 10px;-->
+<!--            margin-bottom: 8px;-->
+<!--            border-radius: 8px;-->
+<!--            border-left: 4px solid var(&#45;&#45;accent);-->
+<!--            font-size: 0.85rem;-->
+<!--            color: var(&#45;&#45;text-secondary);-->
+<!--            cursor: pointer;-->
+<!--            backdrop-filter: blur(10px);-->
+<!--        }-->
+<!--        [data-theme="dark"] .reply-context { background-color: rgba(255,255,255,0.05); }-->
+<!--        .reply-context strong { color: var(&#45;&#45;accent); font-weight: 600; }-->
+<!--        .reply-context p { font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 2px 0 0 0; }-->
+
+<!--        .reactions-container {-->
+<!--            margin-top: 6px;-->
+<!--            display: flex;-->
+<!--            align-items: center;-->
+<!--            flex-wrap: wrap;-->
+<!--            gap: 6px;-->
+<!--        }-->
+
+<!--        .message-content-wrapper {-->
+<!--            padding-bottom: 18px;-->
+<!--        }-->
+<!--        .message-timestamp {-->
+<!--            position: absolute;-->
+<!--            bottom: 5px;-->
+<!--            right: 10px;-->
+<!--            font-size: 0.7rem;-->
+<!--            color: var(&#45;&#45;text-secondary);-->
+<!--        }-->
+
+<!--        .quick-react-bar { position: absolute; top: -40px; left: 10px; z-index: 40; background-color: var(&#45;&#45;bg-secondary); border-radius: 20px; box-shadow: 0 4px 12px var(&#45;&#45;shadow); padding: 4px 8px; display: none; align-items: center; gap: 8px; animation: fadeIn 0.1s ease-out; }-->
+<!--        .sent .quick-react-bar { left: auto; right: 10px; }-->
+<!--        .quick-react-bar.active { display: flex; }-->
+<!--        .quick-react-emoji { font-size: 1.5rem; cursor: pointer; transition: transform 0.1s ease-in-out; }-->
+<!--        .quick-react-emoji:hover { transform: scale(1.2); }-->
+<!--        body, input, button { transition: var(&#45;&#45;transition-fast); }-->
+<!--        .header { background-image: linear-gradient(to right, #2c5d51, var(&#45;&#45;accent)); color: white; position: sticky; top: 0; z-index: 10; width: 100%; }-->
+<!--        .chat-message { animation: fadeIn 0.3s ease-in-out; padding: 2px 12px; }-->
+<!--        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }-->
+<!--        .chat-message-grouped .chat-avatar,-->
+<!--        .chat-message-grouped .message-sender-name { display: none; }-->
+<!--        .chat-message-container.sent .chat-bubble { border-bottom-right-radius: 4px; }-->
+<!--        .chat-message-container.received .chat-bubble { border-bottom-left-radius: 4px; }-->
+<!--        .chat-message-grouped .chat-bubble { border-radius: 12px; }-->
+<!--        .chat-message-grouped.sent .chat-bubble { border-top-right-radius: 4px; }-->
+<!--        .chat-message-grouped.received .chat-bubble { border-top-left-radius: 4px; }-->
+<!--        .online-status { width: 8px; height: 8px; background-color: var(&#45;&#45;online-indicator); border-radius: 50%; margin-right: 8px; flex-shrink: 0; }-->
+<!--        #scrollToBottomBtn { position: absolute; bottom: 120px; right: 20px; background-color: var(&#45;&#45;accent); color: white; width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 8px var(&#45;&#45;shadow); cursor: pointer; transition: opacity 0.3s ease, transform 0.3s ease; opacity: 0; transform: translateY(10px); }-->
+<!--        #scrollToBottomBtn.visible { display: flex; opacity: 1; transform: translateY(0); }-->
+<!--        .chat-bubble { position: relative; }-->
+<!--        .message-dropdown-trigger { position: absolute; top: 2px; right: 4px; padding: 4px; border-radius: 8px; opacity: 0; visibility: hidden; transition: var(&#45;&#45;transition-fast); cursor: pointer; }-->
+<!--        .chat-bubble:hover .message-dropdown-trigger { opacity: 1; visibility: visible; }-->
+<!--        .message-dropdown-trigger:hover { background-color: rgba(0,0,0,0.1); }-->
+<!--        [data-theme="dark"] .message-dropdown-trigger:hover { background-color: rgba(255,255,255,0.1); }-->
+<!--        .message-dropdown-menu { display: none; position: absolute; top: 30px; right: 5px; z-index: 30; background-color: var(&#45;&#45;bg-secondary); border: 1px solid var(&#45;&#45;border); border-radius: 8px; box-shadow: 0 4px 12px var(&#45;&#45;shadow); width: 140px; overflow: hidden; animation: fadeIn 0.1s ease-out; }-->
+<!--        .message-dropdown-menu.active { display: block; }-->
+<!--        .dropdown-item { display: block; padding: 8px 12px; font-size: 0.9rem; color: var(&#45;&#45;text-primary); cursor: pointer; }-->
+<!--        .dropdown-item:hover { background-color: var(&#45;&#45;bg-primary); }-->
+<!--        .dropdown-divider { height: 1px; background-color: var(&#45;&#45;border); margin: 4px 0; }-->
+<!--        .dropdown-item.danger { color: #ef4444; }-->
+<!--        #chat { flex: 1; padding-bottom: 140px; overflow-y: auto; }-->
+<!--        .chat-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }-->
+<!--        .chat-message-container.sent { flex-direction: row-reverse; }-->
+<!--        .active-chat { background-color: var(&#45;&#45;active-chat-bg) !important; font-weight: 600; }-->
+<!--        .scrollbar-hidden::-webkit-scrollbar { display: none; }-->
+<!--        .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }-->
+<!--    </style>-->
+<!--</head>-->
+
+<!--<body class="flex flex-col h-screen bg-[var(&#45;&#45;bg-primary)] text-[var(&#45;&#45;text-primary)] font-sans">-->
+<!--<div class="chat-container max-w-4xl mx-auto w-full flex-1 flex flex-col">-->
+<!--    <div class="header flex justify-between items-center px-5 py-3 shadow-md">-->
+<!--        <h1 id="chat-header" class="text-lg font-bold">Public Chat</h1>-->
+<!--        <div class="flex items-center gap-4">-->
+<!--            <button id="profileBtn" class="text-sm font-medium hover:opacity-80 transition-opacity">Profile</button>-->
+<!--            <span id="themeToggle" class="theme-toggle" title="Toggle Theme">☀️</span>-->
+<!--            <form th:action="@{/logout}" method="post"><button type="submit" class="text-sm font-medium hover:opacity-80 transition-opacity">Logout</button></form>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    <div class="flex flex-1 overflow-hidden relative">-->
+<!--        <div id="chat-area" class="flex-1 flex flex-col">-->
+<!--            <div id="chat" class="flex-1 p-5 overflow-y-auto scrollbar-hidden"></div>-->
+<!--            <div id="typing-indicator" class="px-5 text-[var(&#45;&#45;text-secondary)] text-xs h-5"></div>-->
+<!--        </div>-->
+<!--        <div class="w-64 flex-shrink-0 p-5 bg-[var(&#45;&#45;bg-secondary)] border-l border-[var(&#45;&#45;border)] overflow-y-auto scrollbar-hidden">-->
+<!--            <h5 class="mb-3 text-base font-bold">Conversations</h5>-->
+<!--            <ul id="user-list" class="space-y-1"></ul>-->
+<!--        </div>-->
+<!--        <button id="scrollToBottomBtn" title="Scroll to bottom">-->
+<!--            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>-->
+<!--        </button>-->
+<!--    </div>-->
+<!--</div>-->
+<!--<div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">-->
+<!--    <div class="bg-[var(&#45;&#45;bg-secondary)] p-6 rounded-lg shadow-xl w-full max-w-sm">-->
+<!--        <h3 class="text-xl font-bold mb-4">Your Profile</h3>-->
+<!--        <div class="flex flex-col items-center gap-4">-->
+<!--            <label for="avatarUpload" class="cursor-pointer"><img id="avatarPreview" src="/img/default-avatar.png" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-2 border-[var(&#45;&#45;accent)]"></label>-->
+<!--            <input type="file" id="avatarUpload" class="hidden" accept="image/*">-->
+<!--            <button id="uploadAvatarBtn" class="text-sm text-[var(&#45;&#45;accent)] hover:underline">Change Picture</button>-->
+<!--        </div>-->
+<!--        <div class="mt-6">-->
+<!--            <label for="statusInput" class="block text-sm font-medium text-[var(&#45;&#45;text-secondary)]">Status Message</label>-->
+<!--            <input type="text" id="statusInput" class="mt-1 w-full border border-[var(&#45;&#45;border)] rounded px-3 py-2 bg-transparent" placeholder="What's on your mind?">-->
+<!--        </div>-->
+<!--        <div class="mt-6 flex justify-end gap-3">-->
+<!--            <button id="closeProfileModalBtn" class="px-4 py-2 rounded bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors">Close</button>-->
+<!--            <button id="saveProfileBtn" class="px-4 py-2 rounded bg-[var(&#45;&#45;accent)] text-white hover:bg-[var(&#45;&#45;accent-hover)] transition-colors">Save</button>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+<!--<footer class="fixed bottom-0 left-0 right-0 bg-[var(&#45;&#45;bg-secondary)] border-t border-[var(&#45;&#45;border)] p-4">-->
+<!--    <div class="max-w-4xl mx-auto relative">-->
+<!--        <div id="replyPreview" class="reply-preview">-->
+<!--            <span class="text-[var(&#45;&#45;text-secondary)]">Replying to <strong id="replyPreviewSender"></strong>:</span>-->
+<!--            <span id="replyPreviewContent" class="reply-preview-content"></span>-->
+<!--            <span id="closeReply" class="close-reply text-[var(&#45;&#45;text-secondary)]" title="Cancel Reply">&times;</span>-->
+<!--        </div>-->
+<!--        <div class="flex p-4 items-center">-->
+<!--            <input type="file" id="fileInput" class="hidden"/>-->
+<!--            <button id="attachFileBtn" class="mr-2 text-[var(&#45;&#45;text-secondary)] hover:text-[var(&#45;&#45;accent)] transition p-2 rounded-full">-->
+<!--                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>-->
+<!--            </button>-->
+<!--            <input id="messageInput" type="text" class="flex-1 border border-[var(&#45;&#45;border)] rounded-full px-4 py-2.5" placeholder="Type a message..." autocomplete="off"/>-->
+<!--            <button id="emojiBtn" class="mx-2 text-[var(&#45;&#45;text-secondary)] hover:text-[var(&#45;&#45;accent)] transition p-2 rounded-full">😊</button>-->
+<!--            <button id="sendMessage" class="bg-[var(&#45;&#45;accent)] text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">-->
+<!--                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9-7-9-7v14zm0 0H3" /></svg>-->
+<!--            </button>-->
+<!--        </div>-->
+<!--        <emoji-picker class="light"></emoji-picker>-->
+<!--    </div>-->
+<!--</footer>-->
+
+<!--<script th:inline="javascript">-->
+<!--    let stompClient = null;-->
+<!--    const username = /*[[${#authentication.principal.username}]]*/ 'user';-->
+<!--    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");-->
+<!--    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");-->
+<!--    const headers = { [csrfHeader]: csrfToken };-->
+<!--    const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];-->
+<!--    let typingTimer;-->
+<!--    let isTyping = false;-->
+<!--    const DONE_TYPING_INTERVAL = 2000;-->
+<!--    const typingUsers = new Set();-->
+<!--    const reactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];-->
+<!--    let messageToReplyTo = null;-->
+<!--    const messageCache = new Map();-->
+<!--    let originalTitle = document.title;-->
+<!--    let mentionNotificationCount = 0;-->
+<!--    let currentChat = { type: 'public', id: 'public' };-->
+<!--    const unreadMessages = new Map();-->
+<!--    let onlineUsers = [];-->
+<!--    const messageInput = document.getElementById('messageInput');-->
+<!--    const sendMessageBtn = document.getElementById('sendMessage');-->
+<!--    const userList = document.getElementById('user-list');-->
+<!--    const typingIndicator = document.getElementById('typing-indicator');-->
+<!--    const themeToggle = document.getElementById('themeToggle');-->
+<!--    const replyPreview = document.getElementById('replyPreview');-->
+<!--    const replyPreviewSender = document.getElementById('replyPreviewSender');-->
+<!--    const replyPreviewContent = document.getElementById('replyPreviewContent');-->
+<!--    const closeReplyBtn = document.getElementById('closeReply');-->
+<!--    const fileInput = document.getElementById('fileInput');-->
+<!--    const attachFileBtn = document.getElementById('attachFileBtn');-->
+<!--    const emojiBtn = document.getElementById('emojiBtn');-->
+<!--    const emojiPicker = document.querySelector('emoji-picker');-->
+<!--    const profileBtn = document.getElementById('profileBtn');-->
+<!--    const profileModal = document.getElementById('profileModal');-->
+<!--    const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');-->
+<!--    const saveProfileBtn = document.getElementById('saveProfileBtn');-->
+<!--    const avatarUpload = document.getElementById('avatarUpload');-->
+<!--    const uploadAvatarBtn = document.getElementById('uploadAvatarBtn');-->
+<!--    const avatarPreview = document.getElementById('avatarPreview');-->
+<!--    const statusInput = document.getElementById('statusInput');-->
+<!--    const chatArea = document.getElementById('chat');-->
+<!--    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');-->
+
+<!--    document.addEventListener('DOMContentLoaded', () => {-->
+<!--        initTheme();-->
+<!--        connect();-->
+<!--        cancelReply();-->
+<!--        emojiPicker.style.display = 'none';-->
+<!--        sendMessageBtn.addEventListener('click', sendMessage);-->
+<!--        messageInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') sendMessage(event); });-->
+<!--        messageInput.addEventListener('input', () => { clearTimeout(typingTimer); if (!isTyping) { isTyping = true; sendTypingStatus(true); } typingTimer = setTimeout(() => { isTyping = false; sendTypingStatus(false); }, DONE_TYPING_INTERVAL); });-->
+<!--        themeToggle.addEventListener('click', toggleTheme);-->
+<!--        closeReplyBtn.addEventListener('click', cancelReply);-->
+<!--        attachFileBtn.addEventListener('click', () => fileInput.click());-->
+<!--        fileInput.addEventListener('change', handleFileUpload);-->
+<!--        emojiBtn.addEventListener('click', (e) => { e.stopPropagation(); emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block'; });-->
+<!--        emojiPicker.addEventListener('emoji-click', event => { messageInput.value += event.detail.unicode; });-->
+<!--        document.addEventListener('click', (event) => {-->
+<!--            if (!event.target.closest('.message-dropdown-container') && !event.target.closest('.quick-react-bar')) {-->
+<!--                closeAllPopups();-->
+<!--            }-->
+<!--            if (!emojiPicker.contains(event.target) && event.target !== emojiBtn) {-->
+<!--                emojiPicker.style.display = 'none';-->
+<!--            }-->
+<!--        });-->
+<!--        window.addEventListener('focus', () => { mentionNotificationCount = 0; document.title = originalTitle; });-->
+<!--        profileBtn.addEventListener('click', openProfileModal);-->
+<!--        closeProfileModalBtn.addEventListener('click', () => { profileModal.classList.add('hidden'); profileModal.classList.remove('flex'); });-->
+<!--        uploadAvatarBtn.addEventListener('click', () => avatarUpload.click());-->
+<!--        avatarUpload.addEventListener('change', handleAvatarPreview);-->
+<!--        saveProfileBtn.addEventListener('click', saveProfile);-->
+<!--        chatArea.addEventListener('scroll', handleChatScroll);-->
+<!--        scrollToBottomBtn.addEventListener('click', () => {-->
+<!--            chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });-->
+<!--        });-->
+<!--    });-->
+
+<!--    function closeAllPopups() {-->
+<!--        document.querySelectorAll('.message-dropdown-menu.active').forEach(menu => {-->
+<!--            menu.classList.remove('active');-->
+<!--        });-->
+<!--        document.querySelectorAll('.quick-react-bar.active').forEach(bar => {-->
+<!--            bar.classList.remove('active');-->
+<!--        });-->
+<!--    }-->
+
+<!--    function toggleQuickReactBar(messageId) {-->
+<!--        const bar = document.getElementById(`quick-react-${messageId}`);-->
+<!--        if (bar) {-->
+<!--            const isAlreadyActive = bar.classList.contains('active');-->
+<!--            closeAllPopups();-->
+<!--            if (!isAlreadyActive) {-->
+<!--                bar.classList.add('active');-->
+<!--            }-->
+<!--        }-->
+<!--    }-->
+
+<!--    function handleChatScroll() {-->
+<!--        if (chatArea.scrollHeight - chatArea.scrollTop > chatArea.clientHeight * 1.5) {-->
+<!--            scrollToBottomBtn.classList.add('visible');-->
+<!--        } else {-->
+<!--            scrollToBottomBtn.classList.remove('visible');-->
+<!--        }-->
+<!--    }-->
+
+<!--    function connect() {-->
+<!--        const socket = new SockJS('/chat');-->
+<!--        stompClient = Stomp.over(socket);-->
+<!--        stompClient.connect({}, onConnected, onError);-->
+<!--    }-->
+
+<!--    function onConnected() {-->
+<!--        stompClient.subscribe('/topic/public', onMessageReceived);-->
+<!--        stompClient.subscribe('/user/' + username + '/queue/private', onMessageReceived);-->
+<!--        stompClient.send("/app/chat.addUser", {}, JSON.stringify({sender: username, type: 'JOIN'}));-->
+<!--        switchChat('public');-->
+<!--    }-->
+
+<!--    function onError(error) { console.error('Could not connect to WebSocket server.', error); }-->
+
+<!--    function onMessageReceived(payload) {-->
+<!--        const message = JSON.parse(payload.body);-->
+<!--        if (message.id) { messageCache.set(message.id, message); }-->
+<!--        let messageChatId;-->
+<!--        const isUpdate = ['REACTION', 'EDIT', 'DELETE'].includes(message.type);-->
+<!--        const originalMessage = isUpdate ? messageCache.get(message.id) : null;-->
+<!--        if (originalMessage) {-->
+<!--            messageChatId = originalMessage.recipient ? (originalMessage.sender === username ? originalMessage.recipient : originalMessage.sender) : 'public';-->
+<!--        } else {-->
+<!--            messageChatId = message.recipient ? (message.sender === username ? message.recipient : message.sender) : 'public';-->
+<!--        }-->
+<!--        if (message.type === 'JOIN' || message.type === 'LEAVE') {-->
+<!--            onlineUsers = message.users ? Array.from(message.users) : onlineUsers;-->
+<!--            updateUserList();-->
+<!--        }-->
+<!--        if (messageChatId === currentChat.id) {-->
+<!--            handleIncomingMessage(message);-->
+<!--        } else {-->
+<!--            if(['CHAT', 'PRIVATE', 'FILE', 'GIF', 'MENTION'].includes(message.type)){-->
+<!--                const count = (unreadMessages.get(messageChatId) || 0) + 1;-->
+<!--                unreadMessages.set(messageChatId, count);-->
+<!--                updateUserList();-->
+<!--            }-->
+<!--        }-->
+<!--    }-->
+
+<!--    function handleIncomingMessage(message) {-->
+<!--        if (message.type === 'MENTION') {-->
+<!--            if (!document.hasFocus()) { mentionNotificationCount++; document.title = `(${mentionNotificationCount}) ${originalTitle}`; }-->
+<!--            const mentionAlert = document.createElement('div');-->
+<!--            mentionAlert.className = 'event-message text-yellow-600 font-bold';-->
+<!--            mentionAlert.textContent = `🔔 ${message.sender} ${message.content}`;-->
+<!--            chatArea.appendChild(mentionAlert);-->
+<!--            chatArea.scrollTop = chatArea.scrollHeight;-->
+<!--            setTimeout(() => mentionAlert.remove(), 5000);-->
+<!--            return;-->
+<!--        }-->
+<!--        if (message.type === 'REACTION') { updateReactions(message); return; }-->
+<!--        if (message.type === 'EDIT') {-->
+<!--            const el = document.getElementById('message-' + message.id);-->
+<!--            if(el) {-->
+<!--                const contentEl = el.querySelector('.message-content');-->
+<!--                if (contentEl) contentEl.innerHTML = message.content;-->
+<!--                const timestampEl = el.querySelector('.message-timestamp');-->
+<!--                let indicator = el.querySelector('.edited-indicator');-->
+<!--                if (!indicator && timestampEl) {-->
+<!--                    indicator = document.createElement('span');-->
+<!--                    indicator.className = 'edited-indicator';-->
+<!--                    indicator.textContent = ' (edited)';-->
+<!--                    timestampEl.appendChild(indicator);-->
+<!--                }-->
+<!--            }-->
+<!--            return;-->
+<!--        }-->
+<!--        if (message.type === 'DELETE') { const el = document.getElementById('message-' + message.id); if (el) { el.remove(); } return; }-->
+<!--        displayMessage(message);-->
+<!--    }-->
+
+<!--    async function switchChat(chatId) {-->
+<!--        if (currentChat.id === chatId) return;-->
+<!--        currentChat.id = chatId;-->
+<!--        currentChat.type = (chatId === 'public') ? 'public' : 'private';-->
+<!--        document.getElementById('chat-header').textContent = chatId === 'public' ? '# Public Chat' : `Chat with ${chatId}`;-->
+<!--        chatArea.innerHTML = '';-->
+<!--        messageInput.focus();-->
+<!--        unreadMessages.delete(chatId);-->
+<!--        updateUserList();-->
+<!--        try {-->
+<!--            const url = currentChat.type === 'public' ? '/messages/public' : `/messages/${chatId}`;-->
+<!--            const response = await fetch(url, { headers });-->
+<!--            if (!response.ok) {-->
+<!--                console.error(`Failed to fetch messages for ${chatId}: ${response.statusText}`);-->
+<!--                return;-->
+<!--            }-->
+<!--            const messages = await response.json();-->
+<!--            if (Array.isArray(messages)) {-->
+<!--                messages.forEach(msg => {-->
+<!--                    if (msg.id) messageCache.set(msg.id, msg);-->
+<!--                    displayMessage(msg);-->
+<!--                });-->
+<!--            } else {-->
+<!--                console.error('Invalid message format received:', messages);-->
+<!--            }-->
+<!--        } catch (error) {-->
+<!--            console.error('Error fetching messages:', error);-->
+<!--        }-->
+<!--    }-->
+
+<!--    function sendMessage(event) {-->
+<!--        event.preventDefault();-->
+<!--        const messageContent = messageInput.value.trim();-->
+<!--        if (!messageContent || !stompClient) return;-->
+<!--        let chatMessage = {-->
+<!--            sender: username,-->
+<!--            content: messageContent,-->
+<!--            repliedToMessageId: messageToReplyTo ? messageToReplyTo.messageId : null,-->
+<!--            recipient: currentChat.type === 'private' ? currentChat.id : null-->
+<!--        };-->
+<!--        chatMessage.type = messageContent.startsWith('/gif ') ? 'GIF' : (currentChat.type === 'public' ? 'CHAT' : 'PRIVATE');-->
+<!--        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));-->
+<!--        messageInput.value = '';-->
+<!--        cancelReply();-->
+<!--    }-->
+
+<!--    function updateUserList() {-->
+<!--        userList.innerHTML = '';-->
+<!--        const publicChatEl = document.createElement('li');-->
+<!--        publicChatEl.id = 'user-public';-->
+<!--        publicChatEl.className = `user-list-item p-2 rounded cursor-pointer ${currentChat.id === 'public' ? 'active-chat' : ''}`;-->
+<!--        publicChatEl.onclick = () => switchChat('public');-->
+<!--        const unreadPublic = unreadMessages.get('public') || 0;-->
+<!--        publicChatEl.innerHTML = `<div class="flex items-center"><span class="font-bold text-lg mr-2">#</span><span>Public Chat</span> ${unreadPublic > 0 ? `<span class="unread-badge">${unreadPublic}</span>` : ''}</div>`;-->
+<!--        userList.appendChild(publicChatEl);-->
+<!--        onlineUsers.sort().forEach(user => {-->
+<!--            const userElement = document.createElement('li');-->
+<!--            userElement.id = `user-${user}`;-->
+<!--            const unreadCount = unreadMessages.get(user) || 0;-->
+<!--            const content = `<div class="flex items-center"><div class="online-status"></div><span>${user}</span> ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}</div>`;-->
+<!--            if (user === username) {-->
+<!--                userElement.className = 'user-list-item p-2 rounded text-indigo-400 font-semibold cursor-default';-->
+<!--                userElement.innerHTML = `<div class="flex items-center"><span>${user} (You)</span></div>`;-->
+<!--            } else {-->
+<!--                userElement.className = `user-list-item p-2 rounded cursor-pointer ${currentChat.id === user ? 'active-chat' : ''}`;-->
+<!--                userElement.onclick = () => switchChat(user);-->
+<!--                userElement.innerHTML = content;-->
+<!--            }-->
+<!--            userList.appendChild(userElement);-->
+<!--        });-->
+<!--    }-->
+
+<!--    function createMessageControls(message, isSentByYou) {-->
+<!--        if (message.type === 'JOIN' || message.type === 'LEAVE' || String(message.id).startsWith('upload-')) return null;-->
+<!--        const container = document.createElement('div');-->
+<!--        container.className = 'message-dropdown-container';-->
+<!--        const trigger = document.createElement('button');-->
+<!--        trigger.className = 'message-dropdown-trigger';-->
+<!--        trigger.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(&#45;&#45;text-secondary)]" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>`;-->
+<!--        const menu = document.createElement('div');-->
+<!--        menu.className = 'message-dropdown-menu';-->
+<!--        const replyItem = document.createElement('a');-->
+<!--        replyItem.className = 'dropdown-item';-->
+<!--        replyItem.textContent = 'Reply';-->
+<!--        replyItem.onclick = (e) => { e.preventDefault(); setReplyContext(message.id); };-->
+<!--        menu.appendChild(replyItem);-->
+<!--        const reactItem = document.createElement('a');-->
+<!--        reactItem.className = 'dropdown-item';-->
+<!--        reactItem.textContent = 'React';-->
+<!--        reactItem.onclick = (e) => { e.preventDefault(); toggleQuickReactBar(message.id); };-->
+<!--        menu.appendChild(reactItem);-->
+<!--        if (isSentByYou && (message.type === 'CHAT' || message.type === 'PRIVATE')) {-->
+<!--            const divider = document.createElement('div');-->
+<!--            divider.className = 'dropdown-divider';-->
+<!--            menu.appendChild(divider);-->
+<!--            const editItem = document.createElement('a');-->
+<!--            editItem.className = 'dropdown-item';-->
+<!--            editItem.textContent = 'Edit';-->
+<!--            editItem.onclick = (e) => { e.preventDefault(); promptEdit(message.id); };-->
+<!--            menu.appendChild(editItem);-->
+<!--            const deleteItem = document.createElement('a');-->
+<!--            deleteItem.className = 'dropdown-item danger';-->
+<!--            deleteItem.textContent = 'Delete';-->
+<!--            deleteItem.onclick = (e) => { e.preventDefault(); confirmDelete(message.id); };-->
+<!--            menu.appendChild(deleteItem);-->
+<!--        }-->
+<!--        trigger.addEventListener('click', (event) => {-->
+<!--            event.stopPropagation();-->
+<!--            const isAlreadyActive = menu.classList.contains('active');-->
+<!--            closeAllPopups();-->
+<!--            if (!isAlreadyActive) {-->
+<!--                menu.classList.add('active');-->
+<!--            }-->
+<!--        });-->
+<!--        container.appendChild(trigger);-->
+<!--        container.appendChild(menu);-->
+<!--        return container;-->
+<!--    }-->
+
+<!--    function displayMessage(message) {-->
+<!--        const isSentByYou = message.sender === username;-->
+<!--        const senderName = isSentByYou ? 'You' : message.sender;-->
+<!--        if (message.type === 'TYPING') {-->
+<!--            if (message.content === 'true') typingUsers.add(message.sender); else typingUsers.delete(message.sender);-->
+<!--            updateTypingIndicator();-->
+<!--            return;-->
+<!--        }-->
+<!--        const messageElement = document.createElement('div');-->
+<!--        messageElement.id = 'message-' + message.id;-->
+<!--        messageElement.className = 'chat-message';-->
+<!--        messageElement.dataset.sender = message.sender;-->
+<!--        if (message.type === 'JOIN' || message.type === 'LEAVE') {-->
+<!--            messageElement.className = 'event-message';-->
+<!--            messageElement.textContent = message.sender + (message.type === 'JOIN' ? ' joined!' : ' left!');-->
+<!--        } else {-->
+<!--            const lastMessage = chatArea.lastElementChild;-->
+<!--            const isGrouped = lastMessage && lastMessage.dataset.sender === message.sender && !lastMessage.classList.contains('event-message');-->
+<!--            if(isGrouped) {-->
+<!--                messageElement.classList.add('chat-message-grouped', isSentByYou ? 'sent' : 'received');-->
+<!--            }-->
+<!--            const messageContainer = document.createElement('div');-->
+<!--            messageContainer.className = `chat-message-container flex items-start gap-3 ${isSentByYou ? 'sent' : 'received'}`;-->
+<!--            const avatarUrl = message.senderAvatarUrl || '/img/default-avatar.png';-->
+<!--            const avatarImg = `<img src="${escapeHTML(avatarUrl)}" alt="${escapeHTML(senderName)}" class="chat-avatar mt-1">`;-->
+<!--            const messageBubble = document.createElement('div');-->
+<!--            messageBubble.className = `chat-bubble p-3 rounded-lg max-w-xs md:max-w-md flex-1`;-->
+<!--            messageBubble.style.backgroundColor = isSentByYou ? 'var(&#45;&#45;chat-sent)' : 'var(&#45;&#45;chat-received)';-->
+<!--            if(!isSentByYou) messageBubble.classList.add('shadow');-->
+
+<!--            const quickReactBar = document.createElement('div');-->
+<!--            quickReactBar.id = `quick-react-${message.id}`;-->
+<!--            quickReactBar.className = 'quick-react-bar';-->
+<!--            QUICK_REACTIONS.forEach(emoji => {-->
+<!--                const emojiSpan = document.createElement('span');-->
+<!--                emojiSpan.className = 'quick-react-emoji';-->
+<!--                emojiSpan.textContent = emoji;-->
+<!--                emojiSpan.onclick = () => {-->
+<!--                    sendReaction(message.id, emoji);-->
+<!--                    closeAllPopups();-->
+<!--                };-->
+<!--                quickReactBar.appendChild(emojiSpan);-->
+<!--            });-->
+<!--            messageBubble.appendChild(quickReactBar);-->
+
+<!--            const contentWrapper = document.createElement('div');-->
+<!--            contentWrapper.className = 'message-content-wrapper';-->
+<!--            let contentHtml = '';-->
+<!--            const headerHtml = `<strong class="font-medium text-sm message-sender-name">${senderName}</strong>`;-->
+
+<!--            if (message.repliedToMessageId) {-->
+<!--                const replySender = message.repliedToMessageSender === username ? 'You' : message.repliedToMessageSender;-->
+<!--                contentHtml += `<div class="reply-context" onclick="scrollToMessage(${message.repliedToMessageId})"><strong>${escapeHTML(replySender)}</strong><p>${escapeHTML(message.repliedToMessageContent)}</p></div>`;-->
+<!--            }-->
+<!--            if (message.type === 'FILE') {-->
+<!--                const fileIcon = `<svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;-->
+<!--                contentHtml += `${headerHtml}<div class="file-attachment-card">${fileIcon}<div class="file-info"><div class="file-name">${escapeHTML(message.content)}</div><div class="file-meta">${formatFileSize(message.fileSize)}</div></div><a href="${message.fileUrl}" class="download-btn" target="_blank" download>Download</a></div>`;-->
+<!--            } else {-->
+<!--                contentHtml += `${headerHtml}<br><span class="message-content text-sm">${message.content}</span>`;-->
+<!--                if (message.type === 'GIF') {-->
+<!--                    contentHtml += `<img src="${message.imageUrl}" alt="${message.content}" class="mt-2 max-w-[200px] rounded-lg">`;-->
+<!--                }-->
+<!--                if (message.linkUrl) {-->
+<!--                    const imageUrlHtml = message.linkImageUrl ? `<img src="${escapeHTML(message.linkImageUrl)}" class="link-preview-image" alt="Preview Image" onerror="this.style.display='none'">` : '';-->
+<!--                    contentHtml += `<a href="${escapeHTML(message.linkUrl)}" target="_blank" rel="noopener noreferrer" class="link-preview-card">${imageUrlHtml}<div class="link-preview-content"><div class="link-preview-title">${escapeHTML(message.linkTitle)}</div><div class="link-preview-description">${escapeHTML(message.linkDescription)}</div></div></a>`;-->
+<!--                }-->
+<!--            }-->
+<!--            contentWrapper.innerHTML = contentHtml;-->
+
+<!--            const timestampEl = document.createElement('div');-->
+<!--            timestampEl.className = 'message-timestamp';-->
+<!--            const editedIndicator = message.edited ? `<span class="edited-indicator"> (edited)</span>` : '';-->
+<!--            timestampEl.innerHTML = `${message.timestamp || ''}${editedIndicator}`;-->
+
+<!--            messageBubble.appendChild(contentWrapper);-->
+<!--            messageBubble.appendChild(timestampEl);-->
+
+<!--            const controls = createMessageControls(message, isSentByYou);-->
+<!--            if (controls) messageBubble.appendChild(controls);-->
+
+<!--            const reactionsContainer = createReactionsContainer(message);-->
+<!--            if (reactionsContainer) messageBubble.appendChild(reactionsContainer);-->
+
+<!--            messageContainer.innerHTML = avatarImg;-->
+<!--            messageContainer.appendChild(messageBubble);-->
+<!--            messageElement.appendChild(messageContainer);-->
+<!--        }-->
+<!--        const shouldScroll = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 10;-->
+<!--        chatArea.appendChild(messageElement);-->
+<!--        if (shouldScroll || isSentByYou) {-->
+<!--            chatArea.scrollTop = chatArea.scrollHeight;-->
+<!--        }-->
+<!--    }-->
+
+<!--    function createReactionsContainer(message) { if (!message.reactions) return null; const reactionsContainer = document.createElement('div'); reactionsContainer.id = `reactions-${message.id}`; reactionsContainer.className = `reactions-container`; for (const [emoji, users] of Object.entries(message.reactions)) { const reactionEl = document.createElement('div'); reactionEl.className = 'reaction'; if (users.includes(username)) reactionEl.classList.add('my-reaction'); reactionEl.dataset.emoji = emoji; reactionEl.dataset.users = users.join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.length}</span>`; reactionEl.title = `Reacted by: ${users.join(', ')}`; reactionEl.onclick = () => sendReaction(message.id, emoji); reactionsContainer.appendChild(reactionEl); } return reactionsContainer; }-->
+<!--    function updateReactions(reactionMessage) { const { id: messageId, content: emoji, sender: reactor, recipient: action } = reactionMessage; let reactionsContainer = document.getElementById(`reactions-${messageId}`); if (!reactionsContainer) { reactionsContainer = document.createElement('div'); reactionsContainer.id = `reactions-${messageId}`; reactionsContainer.className = `reactions-container`; document.getElementById('message-' + messageId).querySelector('.chat-bubble').appendChild(reactionsContainer); } let reactionEl = reactionsContainer.querySelector(`[data-emoji="${emoji}"]`); if (action.startsWith('ADD')) { if (!reactionEl) { reactionEl = document.createElement('div'); reactionEl.className = 'reaction'; reactionEl.dataset.emoji = emoji; reactionEl.onclick = () => sendReaction(messageId, emoji); reactionsContainer.appendChild(reactionEl); } const users = new Set((reactionEl.dataset.users || '').split(',').filter(Boolean)); users.add(reactor); reactionEl.dataset.users = Array.from(users).join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.size}</span>`; reactionEl.title = `Reacted by: ${Array.from(users).join(', ')}`; if (users.has(username)) reactionEl.classList.add('my-reaction'); } else if (action.startsWith('REMOVE')) { if (reactionEl) { const users = new Set(reactionEl.dataset.users.split(',')); users.delete(reactor); if (users.size === 0) { reactionEl.remove(); } else { reactionEl.dataset.users = Array.from(users).join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.size}</span>`; reactionEl.title = `Reacted by: ${Array.from(users).join(', ')}`; if (!users.has(username)) reactionEl.classList.remove('my-reaction'); } } } }-->
+<!--    function handleFileUpload(event){ const file = event.target.files[0]; if (!file) return; const formData = new FormData(); formData.append('file', file); const tempId = 'upload-' + Date.now(); const uploadingMessage = { id: tempId, type: currentChat.type === 'public' ? 'CHAT' : 'PRIVATE', sender: username, content: `Uploading ${escapeHTML(file.name)}...`, senderAvatarUrl: avatarPreview.src }; displayMessage(uploadingMessage); fetch('/upload', { method: 'POST', headers: headers, body: formData }).then(response => { if (!response.ok) { throw new Error(`Upload failed with status: ${response.status}`); } return response.json(); }).then(data => { document.getElementById('message-' + tempId)?.remove(); const fileMessage = { type: 'FILE', content: data.fileName, fileUrl: data.fileDownloadUri, fileSize: parseInt(data.size), recipient: currentChat.type === 'private' ? currentChat.id : null }; stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(fileMessage)); }).catch(error => { console.error('Error uploading file:', error); const errorElement = document.getElementById('message-' + tempId); if (errorElement) { const contentDiv = errorElement.querySelector('.message-content'); if (contentDiv) { contentDiv.textContent = `⚠️ Error uploading ${escapeHTML(file.name)}.`; contentDiv.style.color = 'red'; } } }); event.target.value = ''; }-->
+<!--    function formatFileSize(bytes){ if (!bytes || bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }-->
+<!--    function escapeHTML(str){ if (!str) return ''; const p = document.createElement('p'); p.textContent = str; return p.innerHTML; }-->
+<!--    function setReplyContext(messageId){ const message = messageCache.get(messageId); if (!message) return; messageToReplyTo = { messageId: message.id, sender: message.sender, content: message.content }; replyPreviewSender.textContent = message.sender; const shortContent = message.content.replace(/<[^>]+>/g, '').substring(0, 50) + "..."; replyPreviewContent.textContent = shortContent; replyPreview.style.display = 'block'; messageInput.focus(); }-->
+<!--    function cancelReply(){ messageToReplyTo = null; replyPreview.style.display = 'none'; }-->
+<!--    function scrollToMessage(messageId){ const targetMessage = document.getElementById('message-' + messageId); if (targetMessage) { targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' }); targetMessage.style.transition = 'background-color 0.5s'; targetMessage.style.backgroundColor = 'var(&#45;&#45;accent-hover)'; setTimeout(() => { targetMessage.style.backgroundColor = ''; }, 1500); } }-->
+<!--    function toggleTheme(){ const isDark = document.documentElement.getAttribute('data-theme') === 'dark'; const newTheme = isDark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); themeToggle.textContent = isDark ? '☀️' : '🌙'; localStorage.setItem('theme', newTheme); emojiPicker.className = newTheme; }-->
+<!--    function initTheme(){ const savedTheme = localStorage.getItem('theme') || 'light'; document.documentElement.setAttribute('data-theme', savedTheme); themeToggle.textContent = savedTheme === 'dark' ? '🌙' : '☀️'; emojiPicker.className = savedTheme; }-->
+<!--    function sendReaction(messageId, reaction) { if (stompClient) { stompClient.send("/app/chat.toggleReaction", {}, JSON.stringify({ id: messageId, content: reaction })); } closeAllPopups(); }-->
+<!--    function promptEdit(messageId) { const message = messageCache.get(messageId); if (!message) return; const currentContent = message.content.replace(/<span class="mention">@(\w+)<\/span>/g, '@$1'); const newContent = prompt("Edit your message:", currentContent); if (newContent && newContent.trim() !== '' && newContent !== currentContent) { stompClient.send("/app/chat.editMessage", {}, JSON.stringify({ id: messageId, content: newContent })); } }-->
+<!--    function confirmDelete(messageId) { if (confirm("Are you sure you want to delete this message? This action cannot be undone.")) { stompClient.send("/app/chat.deleteMessage", {}, JSON.stringify({ id: messageId })); } }-->
+<!--    function updateTypingIndicator() { typingUsers.delete(username); if (typingUsers.size === 0) { typingIndicator.textContent = ''; } else if (typingUsers.size === 1) { typingIndicator.textContent = `${Array.from(typingUsers)[0]} is typing...`; } else { typingIndicator.textContent = 'Several people are typing...'; } }-->
+<!--    function sendTypingStatus(typing) { if (stompClient) { const typingMessage = { sender: username, type: 'TYPING', content: String(typing) }; stompClient.send("/app/chat.typing", {}, JSON.stringify(typingMessage)); } }-->
+<!--    async function openProfileModal() { try { const response = await fetch('/api/profile', { headers }); if (!response.ok) throw new Error('Could not fetch profile.'); const user = await response.json(); avatarPreview.src = user.avatarUrl || '/img/default-avatar.png'; statusInput.value = user.statusMessage || ''; avatarUpload.value = ''; profileModal.classList.remove('hidden'); profileModal.classList.add('flex'); } catch (error) { console.error("Error opening profile modal:", error); } }-->
+<!--    function handleAvatarPreview(event) { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { avatarPreview.src = e.target.result; }; reader.readAsDataURL(file); } }-->
+<!--    async function saveProfile() { saveProfileBtn.disabled = true; saveProfileBtn.textContent = 'Saving...'; try { await fetch('/api/profile/status', { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: statusInput.value }) }); if (avatarUpload.files[0]) { const formData = new FormData(); formData.append('file', avatarUpload.files[0]); await fetch('/api/profile/avatar', { method: 'POST', headers: headers, body: formData }); } alert("Profile saved! Changes will appear on new messages. You may need to refresh to see your own avatar update on old messages."); profileModal.classList.add('hidden'); profileModal.classList.remove('flex'); } catch (error) { console.error("Error saving profile:", error); alert("Failed to save profile. Please try again."); } finally { saveProfileBtn.disabled = false; saveProfileBtn.textContent = 'Save'; } }-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Chat App</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f7f7ff; --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a; --text-secondary: #5f6c74; --chat-sent: #d4f1f4;
+            --chat-received: #ffffff; --border: #e2e8f0; --accent: #1a3c34;
+            --accent-hover: #153029; --shadow: rgba(0, 0, 0, 0.08); --mention-bg: #ffe082;
+            --mention-text: #4e342e; --active-chat-bg: #e6f0ff; --online-indicator: #22c55e;
+            --transition-fast: all 0.2s ease-in-out;
+        }
+        [data-theme="dark"] {
+            --bg-primary: #121212; --bg-secondary: #1e1e1e;
+            --text-primary: #e1e1e1; --text-secondary: #8b959b; --chat-sent: #2a5a52;
+            --chat-received: #252525; --border: #374151; --accent: #2a5a52;
+            --accent-hover: #1a3c34; --shadow: rgba(0, 0, 0, 0.2); --mention-bg: #624b00;
+            --mention-text: #ffecb3; --active-chat-bg: #2a2e4a; --online-indicator: #4ade80;
+        }
+
+        html { background-color: var(--bg-primary); color: var(--text-primary); }
+        body { background-color: var(--bg-primary); color: var(--text-primary); font-family: 'Inter', sans-serif; transition: var(--transition-fast); }
+
+        .reply-context { background-color: rgba(0,0,0,0.04); padding: 8px 10px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid var(--accent); font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; backdrop-filter: blur(10px); }
+        [data-theme="dark"] .reply-context { background-color: rgba(255,255,255,0.05); }
+        .reply-context strong { color: var(--accent); font-weight: 600; }
+        .reply-context p { font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 2px 0 0 0; }
+
+        .reactions-container { margin-top: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .message-content-wrapper { padding-bottom: 18px; }
+        .message-timestamp { position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: var(--text-secondary); }
+
+        .quick-react-bar { position: absolute; top: -40px; left: 10px; z-index: 40; background-color: var(--bg-secondary); border-radius: 20px; box-shadow: 0 4px 12px var(--shadow); padding: 4px 8px; display: none; align-items: center; gap: 8px; animation: fadeIn 0.1s ease-out; }
+        .sent .quick-react-bar { left: auto; right: 10px; }
+        .quick-react-bar.active { display: flex; }
+        .quick-react-emoji { font-size: 1.5rem; cursor: pointer; transition: transform 0.1s ease-in-out; }
+        .quick-react-emoji:hover { transform: scale(1.2); }
+        .header { background-image: linear-gradient(to right, #2c5d51, var(--accent)); color: white; position: sticky; top: 0; z-index: 10; width: 100%; }
+        .chat-message { animation: fadeIn 0.3s ease-in-out; padding: 2px 12px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-message-grouped .chat-avatar,
+        .chat-message-grouped .message-sender-name { display: none; }
+        .chat-message-container.sent .chat-bubble { border-bottom-right-radius: 4px; }
+        .chat-message-container.received .chat-bubble { border-bottom-left-radius: 4px; }
+        .chat-message-grouped .chat-bubble { border-radius: 12px; }
+        .chat-message-grouped.sent .chat-bubble { border-top-right-radius: 4px; }
+        .chat-message-grouped.received .chat-bubble { border-top-left-radius: 4px; }
+        .online-status { width: 8px; height: 8px; background-color: var(--online-indicator); border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        #scrollToBottomBtn { position: absolute; bottom: 120px; right: 20px; background-color: var(--accent); color: white; width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 8px var(--shadow); cursor: pointer; transition: opacity 0.3s ease, transform 0.3s ease; opacity: 0; transform: translateY(10px); }
+        #scrollToBottomBtn.visible { display: flex; opacity: 1; transform: translateY(0); }
+        .chat-bubble { position: relative; }
+        .message-dropdown-trigger { position: absolute; top: 2px; right: 4px; padding: 4px; border-radius: 8px; opacity: 0; visibility: hidden; transition: var(--transition-fast); cursor: pointer; }
+        .chat-bubble:hover .message-dropdown-trigger { opacity: 1; visibility: visible; }
+        .message-dropdown-trigger:hover { background-color: rgba(0,0,0,0.1); }
+        [data-theme="dark"] .message-dropdown-trigger:hover { background-color: rgba(255,255,255,0.1); }
+        .message-dropdown-menu { display: none; position: absolute; top: 30px; right: 5px; z-index: 30; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow); width: 140px; overflow: hidden; animation: fadeIn 0.1s ease-out; }
+        .message-dropdown-menu.active { display: block; }
+        .dropdown-item { display: block; padding: 8px 12px; font-size: 0.9rem; color: var(--text-primary); cursor: pointer; }
+        .dropdown-item:hover { background-color: var(--bg-primary); }
+        .dropdown-divider { height: 1px; background-color: var(--border); margin: 4px 0; }
+        .dropdown-item.danger { color: #ef4444; }
+        #chat { flex: 1; padding-bottom: 140px; overflow-y: auto; }
+        .chat-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .chat-message-container.sent { flex-direction: row-reverse; }
+        .active-chat { background-color: var(--active-chat-bg) !important; font-weight: 600; }
+        .scrollbar-hidden::-webkit-scrollbar { display: none; }
+        .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen font-sans">
+<div class="chat-container max-w-4xl mx-auto w-full flex-1 flex flex-col">
+    <div class="header flex justify-between items-center px-5 py-3 shadow-md">
+        <h1 id="chat-header" class="text-lg font-bold">Public Chat</h1>
+        <div class="flex items-center gap-4">
+            <button id="profileBtn" class="text-sm font-medium hover:opacity-80 transition-opacity">Profile</button>
+            <span id="themeToggle" class="theme-toggle" title="Toggle Theme">☀️</span>
+            <form th:action="@{/logout}" method="post"><button type="submit" class="text-sm font-medium hover:opacity-80 transition-opacity">Logout</button></form>
+        </div>
+    </div>
+    <div class="flex flex-1 overflow-hidden relative">
+        <div id="chat-area" class="flex-1 flex flex-col bg-[var(--bg-primary)]">
+            <div id="chat" class="flex-1 p-5 overflow-y-auto scrollbar-hidden"></div>
+            <div id="typing-indicator" class="px-5 text-[var(--text-secondary)] text-xs h-5"></div>
+        </div>
+        <div class="w-64 flex-shrink-0 p-5 bg-[var(--bg-secondary)] border-l border-[var(--border)] overflow-y-auto scrollbar-hidden">
+            <h5 class="mb-3 text-base font-bold">Conversations</h5>
+            <ul id="user-list" class="space-y-1"></ul>
+        </div>
+        <button id="scrollToBottomBtn" title="Scroll to bottom">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+        </button>
+    </div>
+</div>
+<div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-xl w-full max-w-sm">
+        <h3 class="text-xl font-bold mb-4">Your Profile</h3>
+        <div class="flex flex-col items-center gap-4">
+            <label for="avatarUpload" class="cursor-pointer"><img id="avatarPreview" src="/img/default-avatar.png" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-2 border-[var(--accent)]"></label>
+            <input type="file" id="avatarUpload" class="hidden" accept="image/*">
+            <button id="uploadAvatarBtn" class="text-sm text-[var(--accent)] hover:underline">Change Picture</button>
+        </div>
+        <div class="mt-6">
+            <label for="statusInput" class="block text-sm font-medium text-[var(--text-secondary)]">Status Message</label>
+            <input type="text" id="statusInput" class="mt-1 w-full border border-[var(--border)] rounded px-3 py-2 bg-transparent" placeholder="What's on your mind?">
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button id="closeProfileModalBtn" class="px-4 py-2 rounded bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors">Close</button>
+            <button id="saveProfileBtn" class="px-4 py-2 rounded bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-colors">Save</button>
+        </div>
+    </div>
+</div>
+<footer class="fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border)] p-4">
+    <div class="max-w-4xl mx-auto relative">
+        <div id="replyPreview" class="reply-preview">
+            <span class="text-[var(--text-secondary)]">Replying to <strong id="replyPreviewSender"></strong>:</span>
+            <span id="replyPreviewContent" class="reply-preview-content"></span>
+            <span id="closeReply" class="close-reply text-[var(--text-secondary)]" title="Cancel Reply">&times;</span>
+        </div>
+        <div class="flex p-4 items-center">
+            <input type="file" id="fileInput" class="hidden"/>
+            <button id="attachFileBtn" class="mr-2 text-[var(--text-secondary)] hover:text-[var(--accent)] transition p-2 rounded-full">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            </button>
+            <input id="messageInput" type="text" class="flex-1 border border-[var(--border)] rounded-full px-4 py-2.5" placeholder="Type a message..." autocomplete="off"/>
+            <button id="emojiBtn" class="mx-2 text-[var(--text-secondary)] hover:text-[var(--accent)] transition p-2 rounded-full">😊</button>
+            <button id="sendMessage" class="bg-[var(--accent)] text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9-7-9-7v14zm0 0H3" /></svg>
+            </button>
+        </div>
+        <emoji-picker class="light"></emoji-picker>
+    </div>
+</footer>
+
+<script th:inline="javascript">
+    let stompClient = null;
+    const username = /*[[${#authentication.principal.username}]]*/ 'user';
+    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+    const headers = { [csrfHeader]: csrfToken };
+    const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+    let typingTimer;
+    let isTyping = false;
+    const DONE_TYPING_INTERVAL = 2000;
+    const typingUsers = new Set();
+    const reactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
+    let messageToReplyTo = null;
+    const messageCache = new Map();
+    let originalTitle = document.title;
+    let mentionNotificationCount = 0;
+    let currentChat = { type: 'public', id: 'public' };
+    const unreadMessages = new Map();
+    let onlineUsers = [];
+    const messageInput = document.getElementById('messageInput');
+    const sendMessageBtn = document.getElementById('sendMessage');
+    const userList = document.getElementById('user-list');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const themeToggle = document.getElementById('themeToggle');
+    const replyPreview = document.getElementById('replyPreview');
+    const replyPreviewSender = document.getElementById('replyPreviewSender');
+    const replyPreviewContent = document.getElementById('replyPreviewContent');
+    const closeReplyBtn = document.getElementById('closeReply');
+    const fileInput = document.getElementById('fileInput');
+    const attachFileBtn = document.getElementById('attachFileBtn');
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPicker = document.querySelector('emoji-picker');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileModal = document.getElementById('profileModal');
+    const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
+    const avatarUpload = document.getElementById('avatarUpload');
+    const uploadAvatarBtn = document.getElementById('uploadAvatarBtn');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const statusInput = document.getElementById('statusInput');
+    const chatArea = document.getElementById('chat');
+    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initTheme();
+        connect();
+        cancelReply();
+        emojiPicker.style.display = 'none';
+        sendMessageBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') sendMessage(event); });
+        messageInput.addEventListener('input', () => { clearTimeout(typingTimer); if (!isTyping) { isTyping = true; sendTypingStatus(true); } typingTimer = setTimeout(() => { isTyping = false; sendTypingStatus(false); }, DONE_TYPING_INTERVAL); });
+        themeToggle.addEventListener('click', toggleTheme);
+        closeReplyBtn.addEventListener('click', cancelReply);
+        attachFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        emojiBtn.addEventListener('click', (e) => { e.stopPropagation(); emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block'; });
+        emojiPicker.addEventListener('emoji-click', event => { messageInput.value += event.detail.unicode; });
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.message-dropdown-container') && !event.target.closest('.quick-react-bar')) {
+                closeAllPopups();
+            }
+            if (!emojiPicker.contains(event.target) && event.target !== emojiBtn) {
+                emojiPicker.style.display = 'none';
+            }
+        });
+        window.addEventListener('focus', () => { mentionNotificationCount = 0; document.title = originalTitle; });
+        profileBtn.addEventListener('click', openProfileModal);
+        closeProfileModalBtn.addEventListener('click', () => { profileModal.classList.add('hidden'); profileModal.classList.remove('flex'); });
+        uploadAvatarBtn.addEventListener('click', () => avatarUpload.click());
+        avatarUpload.addEventListener('change', handleAvatarPreview);
+        saveProfileBtn.addEventListener('click', saveProfile);
+        chatArea.addEventListener('scroll', handleChatScroll);
+        scrollToBottomBtn.addEventListener('click', () => {
+            chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+        });
+    });
+
+    function closeAllPopups() {
+        document.querySelectorAll('.message-dropdown-menu.active').forEach(menu => menu.classList.remove('active'));
+        document.querySelectorAll('.quick-react-bar.active').forEach(bar => bar.classList.remove('active'));
+    }
+
+    function toggleQuickReactBar(messageId) {
+        const bar = document.getElementById(`quick-react-${messageId}`);
+        if (bar) {
+            const isAlreadyActive = bar.classList.contains('active');
+            closeAllPopups();
+            if (!isAlreadyActive) bar.classList.add('active');
+        }
+    }
+
+    function handleChatScroll() {
+        if (chatArea.scrollHeight - chatArea.scrollTop > chatArea.clientHeight * 1.5) {
+            scrollToBottomBtn.classList.add('visible');
+        } else {
+            scrollToBottomBtn.classList.remove('visible');
+        }
+    }
+
+    function connect() {
+        const socket = new SockJS('/chat');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, onConnected, onError);
+    }
+
+    function onConnected() {
+        stompClient.subscribe('/topic/public', onMessageReceived);
+        stompClient.subscribe('/user/' + username + '/queue/private', onMessageReceived);
+        stompClient.send("/app/chat.addUser", {}, JSON.stringify({sender: username, type: 'JOIN'}));
+        switchChat('public');
+    }
+
+    function onError(error) {
+        console.error('Could not connect to WebSocket server.', error);
+    }
+
+    function onMessageReceived(payload) {
+        const message = JSON.parse(payload.body);
+        if (message.id) { messageCache.set(message.id, message); }
+        let messageChatId;
+        const isUpdate = ['REACTION', 'EDIT', 'DELETE'].includes(message.type);
+        const originalMessage = isUpdate ? messageCache.get(message.id) : null;
+        if (originalMessage) {
+            messageChatId = originalMessage.recipient ? (originalMessage.sender === username ? originalMessage.recipient : originalMessage.sender) : 'public';
+        } else {
+            messageChatId = message.recipient ? (message.sender === username ? message.recipient : message.sender) : 'public';
+        }
+        if (message.type === 'JOIN' || message.type === 'LEAVE') {
+            onlineUsers = message.users ? Array.from(message.users) : onlineUsers;
+            updateUserList();
+        }
+        if (messageChatId === currentChat.id) {
+            handleIncomingMessage(message);
+        } else {
+            if(['CHAT', 'PRIVATE', 'FILE', 'GIF', 'MENTION'].includes(message.type)){
+                const count = (unreadMessages.get(messageChatId) || 0) + 1;
+                unreadMessages.set(messageChatId, count);
+                updateUserList();
+            }
+        }
+    }
+
+    function handleIncomingMessage(message) {
+        if (message.type === 'MENTION') {
+            if (!document.hasFocus()) { mentionNotificationCount++; document.title = `(${mentionNotificationCount}) ${originalTitle}`; }
+            const mentionAlert = document.createElement('div');
+            mentionAlert.className = 'event-message text-yellow-600 font-bold';
+            mentionAlert.textContent = `🔔 ${message.sender} ${message.content}`;
+            chatArea.appendChild(mentionAlert);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            setTimeout(() => mentionAlert.remove(), 5000);
+            return;
+        }
+        if (message.type === 'REACTION') { updateReactions(message); return; }
+        if (message.type === 'EDIT') {
+            const el = document.getElementById('message-' + message.id);
+            if(el) {
+                const contentEl = el.querySelector('.message-content');
+                if (contentEl) contentEl.innerHTML = message.content;
+                const timestampEl = el.querySelector('.message-timestamp');
+                let indicator = el.querySelector('.edited-indicator');
+                if (!indicator && timestampEl) {
+                    indicator = document.createElement('span');
+                    indicator.className = 'edited-indicator';
+                    indicator.textContent = ' (edited)';
+                    timestampEl.appendChild(indicator);
+                }
+            }
+            return;
+        }
+        if (message.type === 'DELETE') { const el = document.getElementById('message-' + message.id); if (el) { el.remove(); } return; }
+        displayMessage(message);
+    }
+
+    async function switchChat(chatId) {
+        if (currentChat.id === chatId) return;
+        currentChat.id = chatId;
+        currentChat.type = (chatId === 'public') ? 'public' : 'private';
+        document.getElementById('chat-header').textContent = chatId === 'public' ? '# Public Chat' : `Chat with ${chatId}`;
+        chatArea.innerHTML = '';
+        messageInput.focus();
+        unreadMessages.delete(chatId);
+        updateUserList();
+        try {
+            const url = currentChat.type === 'public' ? '/messages/public' : `/messages/${chatId}`;
+            const response = await fetch(url, { headers });
+            if (!response.ok) {
+                console.error(`Failed to fetch messages for ${chatId}: ${response.statusText}`);
+                return;
+            }
+            const messages = await response.json();
+            if (Array.isArray(messages)) {
+                messages.forEach(msg => {
+                    if (msg.id) messageCache.set(msg.id, msg);
+                    displayMessage(msg);
+                });
+            } else {
+                console.error('Invalid message format received:', messages);
+            }
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+        }
+    }
+
+    function sendMessage(event) {
+        event.preventDefault();
+        const messageContent = messageInput.value.trim();
+        if (!messageContent || !stompClient) return;
+        let chatMessage = {
+            sender: username,
+            content: messageContent,
+            repliedToMessageId: messageToReplyTo ? messageToReplyTo.messageId : null,
+            recipient: currentChat.type === 'private' ? currentChat.id : null
+        };
+        chatMessage.type = messageContent.startsWith('/gif ') ? 'GIF' : (currentChat.type === 'public' ? 'CHAT' : 'PRIVATE');
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+        messageInput.value = '';
+        cancelReply();
+    }
+
+    function updateUserList() {
+        userList.innerHTML = '';
+        const publicChatEl = document.createElement('li');
+        publicChatEl.id = 'user-public';
+        publicChatEl.className = `user-list-item p-2 rounded cursor-pointer ${currentChat.id === 'public' ? 'active-chat' : ''}`;
+        publicChatEl.onclick = () => switchChat('public');
+        const unreadPublic = unreadMessages.get('public') || 0;
+        publicChatEl.innerHTML = `<div class="flex items-center"><span class="font-bold text-lg mr-2">#</span><span>Public Chat</span> ${unreadPublic > 0 ? `<span class="unread-badge">${unreadPublic}</span>` : ''}</div>`;
+        userList.appendChild(publicChatEl);
+        onlineUsers.sort().forEach(user => {
+            const userElement = document.createElement('li');
+            userElement.id = `user-${user}`;
+            const unreadCount = unreadMessages.get(user) || 0;
+            const content = `<div class="flex items-center"><div class="online-status"></div><span>${user}</span> ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}</div>`;
+            if (user === username) {
+                userElement.className = 'user-list-item p-2 rounded text-indigo-400 font-semibold cursor-default';
+                userElement.innerHTML = `<div class="flex items-center"><span>${user} (You)</span></div>`;
+            } else {
+                userElement.className = `user-list-item p-2 rounded cursor-pointer ${currentChat.id === user ? 'active-chat' : ''}`;
+                userElement.onclick = () => switchChat(user);
+                userElement.innerHTML = content;
+            }
+            userList.appendChild(userElement);
+        });
+    }
+
+    function createMessageControls(message, isSentByYou) {
+        if (message.type === 'JOIN' || message.type === 'LEAVE' || String(message.id).startsWith('upload-')) return null;
+        const container = document.createElement('div');
+        container.className = 'message-dropdown-container';
+        const trigger = document.createElement('button');
+        trigger.className = 'message-dropdown-trigger';
+        trigger.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--text-secondary)]" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>`;
+        const menu = document.createElement('div');
+        menu.className = 'message-dropdown-menu';
+        const replyItem = document.createElement('a');
+        replyItem.className = 'dropdown-item';
+        replyItem.textContent = 'Reply';
+        replyItem.onclick = (e) => { e.preventDefault(); setReplyContext(message.id); };
+        menu.appendChild(replyItem);
+        const reactItem = document.createElement('a');
+        reactItem.className = 'dropdown-item';
+        reactItem.textContent = 'React';
+        reactItem.onclick = (e) => { e.preventDefault(); toggleQuickReactBar(message.id); };
+        menu.appendChild(reactItem);
+        if (isSentByYou && (message.type === 'CHAT' || message.type === 'PRIVATE')) {
+            const divider = document.createElement('div');
+            divider.className = 'dropdown-divider';
+            menu.appendChild(divider);
+            const editItem = document.createElement('a');
+            editItem.className = 'dropdown-item';
+            editItem.textContent = 'Edit';
+            editItem.onclick = (e) => { e.preventDefault(); promptEdit(message.id); };
+            menu.appendChild(editItem);
+            const deleteItem = document.createElement('a');
+            deleteItem.className = 'dropdown-item danger';
+            deleteItem.textContent = 'Delete';
+            deleteItem.onclick = (e) => { e.preventDefault(); confirmDelete(message.id); };
+            menu.appendChild(deleteItem);
+        }
+        trigger.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isAlreadyActive = menu.classList.contains('active');
+            closeAllPopups();
+            if (!isAlreadyActive) menu.classList.add('active');
+        });
+        container.appendChild(trigger);
+        container.appendChild(menu);
+        return container;
+    }
+
+    function displayMessage(message) {
+        const isSentByYou = message.sender === username;
+        const senderName = isSentByYou ? 'You' : message.sender;
+        if (message.type === 'TYPING') {
+            if (message.content === 'true') typingUsers.add(message.sender); else typingUsers.delete(message.sender);
+            updateTypingIndicator();
+            return;
+        }
+        const messageElement = document.createElement('div');
+        messageElement.id = 'message-' + message.id;
+        messageElement.className = 'chat-message';
+        messageElement.dataset.sender = message.sender;
+        if (message.type === 'JOIN' || message.type === 'LEAVE') {
+            messageElement.className = 'event-message';
+            messageElement.textContent = message.sender + (message.type === 'JOIN' ? ' joined!' : ' left!');
+        } else {
+            const lastMessage = chatArea.lastElementChild;
+            const isGrouped = lastMessage && lastMessage.dataset.sender === message.sender && !lastMessage.classList.contains('event-message');
+            if(isGrouped) {
+                messageElement.classList.add('chat-message-grouped', isSentByYou ? 'sent' : 'received');
+            }
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `chat-message-container flex items-start gap-3 ${isSentByYou ? 'sent' : 'received'}`;
+            const avatarUrl = message.senderAvatarUrl || '/img/default-avatar.png';
+            const avatarImg = `<img src="${escapeHTML(avatarUrl)}" alt="${escapeHTML(senderName)}" class="chat-avatar mt-1">`;
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `chat-bubble p-3 rounded-lg max-w-xs md:max-w-md`;
+            messageBubble.style.backgroundColor = isSentByYou ? 'var(--chat-sent)' : 'var(--chat-received)';
+            if(!isSentByYou) messageBubble.classList.add('shadow');
+
+            const quickReactBar = document.createElement('div');
+            quickReactBar.id = `quick-react-${message.id}`;
+            quickReactBar.className = 'quick-react-bar';
+            QUICK_REACTIONS.forEach(emoji => {
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'quick-react-emoji';
+                emojiSpan.textContent = emoji;
+                emojiSpan.onclick = () => { sendReaction(message.id, emoji); closeAllPopups(); };
+                quickReactBar.appendChild(emojiSpan);
+            });
+            messageBubble.appendChild(quickReactBar);
+
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'message-content-wrapper';
+            let contentHtml = `<strong class="font-medium text-sm message-sender-name">${senderName}</strong>`;
+
+            if (message.repliedToMessageId) {
+                const replySender = message.repliedToMessageSender === username ? 'You' : message.repliedToMessageSender;
+                contentHtml += `<div class="reply-context" onclick="scrollToMessage(${message.repliedToMessageId})"><strong>${escapeHTML(replySender)}</strong><p>${escapeHTML(message.repliedToMessageContent)}</p></div>`;
+            }
+            if (message.type === 'FILE') {
+                const fileIcon = `<svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;
+                contentHtml += `<div class="file-attachment-card">${fileIcon}<div class="file-info"><div class="file-name">${escapeHTML(message.content)}</div><div class="file-meta">${formatFileSize(message.fileSize)}</div></div><a href="${message.fileUrl}" class="download-btn" target="_blank" download>Download</a></div>`;
+            } else {
+                contentHtml += `<div class="message-content text-sm">${message.content}</div>`;
+                if (message.type === 'GIF') {
+                    contentHtml += `<img src="${message.imageUrl}" alt="${message.content}" class="mt-2 max-w-[200px] rounded-lg">`;
+                }
+                if (message.linkUrl) {
+                    const imageUrlHtml = message.linkImageUrl ? `<img src="${escapeHTML(message.linkImageUrl)}" class="link-preview-image" alt="Preview Image" onerror="this.style.display='none'">` : '';
+                    contentHtml += `<a href="${escapeHTML(message.linkUrl)}" target="_blank" rel="noopener noreferrer" class="link-preview-card">${imageUrlHtml}<div class="link-preview-content"><div class="link-preview-title">${escapeHTML(message.linkTitle)}</div><div class="link-preview-description">${escapeHTML(message.linkDescription)}</div></div></a>`;
+                }
+            }
+            contentWrapper.innerHTML = contentHtml;
+
+            const timestampEl = document.createElement('div');
+            timestampEl.className = 'message-timestamp';
+            const editedIndicator = message.edited ? `<span class="edited-indicator"> (edited)</span>` : '';
+            timestampEl.innerHTML = `${message.timestamp || ''}${editedIndicator}`;
+
+            messageBubble.appendChild(contentWrapper);
+            messageBubble.appendChild(timestampEl);
+
+            const controls = createMessageControls(message, isSentByYou);
+            if (controls) messageBubble.appendChild(controls);
+
+            const reactionsContainer = createReactionsContainer(message);
+            if (reactionsContainer) contentWrapper.appendChild(reactionsContainer);
+
+            messageContainer.innerHTML = avatarImg;
+            messageContainer.appendChild(messageBubble);
+            messageElement.appendChild(messageContainer);
+        }
+        const shouldScroll = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 10;
+        chatArea.appendChild(messageElement);
+        if (shouldScroll || isSentByYou) {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+    }
+
+    function createReactionsContainer(message) { if (!message.reactions) return null; const reactionsContainer = document.createElement('div'); reactionsContainer.id = `reactions-${message.id}`; reactionsContainer.className = `reactions-container`; for (const [emoji, users] of Object.entries(message.reactions)) { const reactionEl = document.createElement('div'); reactionEl.className = 'reaction bg-[var(--bg-secondary)] border border-[var(--border)] rounded-full px-2 py-0.5 text-xs'; if (users.includes(username)) reactionEl.classList.add('my-reaction'); reactionEl.dataset.emoji = emoji; reactionEl.dataset.users = users.join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.length}</span>`; reactionEl.title = `Reacted by: ${users.join(', ')}`; reactionEl.onclick = () => sendReaction(message.id, emoji); reactionsContainer.appendChild(reactionEl); } return reactionsContainer; }
+    function updateReactions(reactionMessage) { const { id: messageId, content: emoji, sender: reactor, recipient: action } = reactionMessage; let reactionsContainer = document.getElementById(`reactions-${messageId}`); if (!reactionsContainer) { reactionsContainer = document.createElement('div'); reactionsContainer.id = `reactions-${messageId}`; reactionsContainer.className = `reactions-container`; document.getElementById('message-' + messageId).querySelector('.message-content-wrapper').appendChild(reactionsContainer); } let reactionEl = reactionsContainer.querySelector(`[data-emoji="${emoji}"]`); if (action.startsWith('ADD')) { if (!reactionEl) { reactionEl = document.createElement('div'); reactionEl.className = 'reaction bg-[var(--bg-secondary)] border border-[var(--border)] rounded-full px-2 py-0.5 text-xs'; reactionEl.dataset.emoji = emoji; reactionEl.onclick = () => sendReaction(messageId, emoji); reactionsContainer.appendChild(reactionEl); } const users = new Set((reactionEl.dataset.users || '').split(',').filter(Boolean)); users.add(reactor); reactionEl.dataset.users = Array.from(users).join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.size}</span>`; reactionEl.title = `Reacted by: ${Array.from(users).join(', ')}`; if (users.has(username)) reactionEl.classList.add('my-reaction'); } else if (action.startsWith('REMOVE')) { if (reactionEl) { const users = new Set(reactionEl.dataset.users.split(',')); users.delete(reactor); if (users.size === 0) { reactionEl.remove(); } else { reactionEl.dataset.users = Array.from(users).join(','); reactionEl.innerHTML = `<span>${emoji}</span>&nbsp;<span>${users.size}</span>`; reactionEl.title = `Reacted by: ${Array.from(users).join(', ')}`; if (!users.has(username)) reactionEl.classList.remove('my-reaction'); } } } }
+    function handleFileUpload(event){ const file = event.target.files[0]; if (!file) return; const formData = new FormData(); formData.append('file', file); const tempId = 'upload-' + Date.now(); const uploadingMessage = { id: tempId, type: currentChat.type === 'public' ? 'CHAT' : 'PRIVATE', sender: username, content: `Uploading ${escapeHTML(file.name)}...`, senderAvatarUrl: avatarPreview.src }; displayMessage(uploadingMessage); fetch('/upload', { method: 'POST', headers: headers, body: formData }).then(response => { if (!response.ok) { throw new Error(`Upload failed with status: ${response.status}`); } return response.json(); }).then(data => { document.getElementById('message-' + tempId)?.remove(); const fileMessage = { type: 'FILE', content: data.fileName, fileUrl: data.fileDownloadUri, fileSize: parseInt(data.size), recipient: currentChat.type === 'private' ? currentChat.id : null }; stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(fileMessage)); }).catch(error => { console.error('Error uploading file:', error); const errorElement = document.getElementById('message-' + tempId); if (errorElement) { const contentDiv = errorElement.querySelector('.message-content'); if (contentDiv) { contentDiv.textContent = `⚠️ Error uploading ${escapeHTML(file.name)}.`; contentDiv.style.color = 'red'; } } }); event.target.value = ''; }
+    function formatFileSize(bytes){ if (!bytes || bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+    function escapeHTML(str){ if (!str) return ''; const p = document.createElement('p'); p.textContent = str; return p.innerHTML; }
+    function setReplyContext(messageId){ const message = messageCache.get(messageId); if (!message) return; messageToReplyTo = { messageId: message.id, sender: message.sender, content: message.content }; replyPreviewSender.textContent = message.sender; const shortContent = message.content.replace(/<[^>]+>/g, '').substring(0, 50) + "..."; replyPreviewContent.textContent = shortContent; replyPreview.style.display = 'block'; messageInput.focus(); }
+    function cancelReply(){ messageToReplyTo = null; replyPreview.style.display = 'none'; }
+    function scrollToMessage(messageId){ const targetMessage = document.getElementById('message-' + messageId); if (targetMessage) { targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' }); targetMessage.style.transition = 'background-color 0.5s'; targetMessage.style.backgroundColor = 'var(--accent-hover)'; setTimeout(() => { targetMessage.style.backgroundColor = ''; }, 1500); } }
+    function toggleTheme(){ const isDark = document.documentElement.getAttribute('data-theme') === 'dark'; const newTheme = isDark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); themeToggle.textContent = isDark ? '☀️' : '🌙'; localStorage.setItem('theme', newTheme); emojiPicker.className = newTheme; }
+    function initTheme(){ const savedTheme = localStorage.getItem('theme') || 'light'; document.documentElement.setAttribute('data-theme', savedTheme); themeToggle.textContent = savedTheme === 'dark' ? '🌙' : '☀️'; emojiPicker.className = savedTheme; }
+    function sendReaction(messageId, reaction) { if (stompClient) { stompClient.send("/app/chat.toggleReaction", {}, JSON.stringify({ id: messageId, content: reaction })); } closeAllPopups(); }
+    function promptEdit(messageId) { const message = messageCache.get(messageId); if (!message) return; const currentContent = message.content.replace(/<span class="mention">@(\w+)<\/span>/g, '@$1'); const newContent = prompt("Edit your message:", currentContent); if (newContent && newContent.trim() !== '' && newContent !== currentContent) { stompClient.send("/app/chat.editMessage", {}, JSON.stringify({ id: messageId, content: newContent })); } }
+    function confirmDelete(messageId) { if (confirm("Are you sure you want to delete this message? This action cannot be undone.")) { stompClient.send("/app/chat.deleteMessage", {}, JSON.stringify({ id: messageId })); } }
+    function updateTypingIndicator() { typingUsers.delete(username); if (typingUsers.size === 0) { typingIndicator.textContent = ''; } else if (typingUsers.size === 1) { typingIndicator.textContent = `${Array.from(typingUsers)[0]} is typing...`; } else { typingIndicator.textContent = 'Several people are typing...'; } }
+    function sendTypingStatus(typing) { if (stompClient) { const typingMessage = { sender: username, type: 'TYPING', content: String(typing) }; stompClient.send("/app/chat.typing", {}, JSON.stringify(typingMessage)); } }
+    async function openProfileModal() { try { const response = await fetch('/api/profile', { headers }); if (!response.ok) throw new Error('Could not fetch profile.'); const user = await response.json(); avatarPreview.src = user.avatarUrl || '/img/default-avatar.png'; statusInput.value = user.statusMessage || ''; avatarUpload.value = ''; profileModal.classList.remove('hidden'); profileModal.classList.add('flex'); } catch (error) { console.error("Error opening profile modal:", error); } }
+    function handleAvatarPreview(event) { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { avatarPreview.src = e.target.result; }; reader.readAsDataURL(file); } }
+    async function saveProfile() { saveProfileBtn.disabled = true; saveProfileBtn.textContent = 'Saving...'; try { await fetch('/api/profile/status', { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: statusInput.value }) }); if (avatarUpload.files[0]) { const formData = new FormData(); formData.append('file', avatarUpload.files[0]); await fetch('/api/profile/avatar', { method: 'POST', headers: headers, body: formData }); } alert("Profile saved! Changes will appear on new messages. You may need to refresh to see your own avatar update on old messages."); profileModal.classList.add('hidden'); profileModal.classList.remove('flex'); } catch (error) { console.error("Error saving profile:", error); alert("Failed to save profile. Please try again."); } finally { saveProfileBtn.disabled = false; saveProfileBtn.textContent = 'Save'; } }
+</script>
+</body>
+</html>
+
