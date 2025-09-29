@@ -1,4 +1,4 @@
-# ConnectSphere---Real-Time-Chat-Application
+# ConnectSphere--Real-Time-Chat-Application
 
 ConnectSphere is a sophisticated, feature-rich messaging application built with a powerful backend using **Spring Boot** and a dynamic, modern frontend using **vanilla JavaScript** and **Tailwind CSS**. It provides a comprehensive suite of tools for real-time communication, including private messaging, rich media sharing, and interactive controls, all wrapped in a clean, professional, and intuitive user interface.
 
